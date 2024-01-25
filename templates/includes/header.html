@@ -32,8 +32,8 @@
                     <a @click="dropdownOpen = !dropdownOpen" @click.away="dropdownOpen = false"
                        class="cursor-pointer select-none">
                         <img class="h-8 w-8 rounded-full object-cover"
-                             src={{ user.profile.image.url }}/>
-                        {{ user.username | capfirst }}
+                             src={{ user.profile.avatar }}/>
+                        {{ user.profile.name | capfirst }}
                         <img x-bind:class="dropdownOpen && 'rotate-180 duration-300'" class="w-4"
                              src="https://img.icons8.com/small/32/777777/expand-arrow.png"/>
                     </a>

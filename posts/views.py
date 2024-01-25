@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 
 from posts.forms import PostCreateForm, PostEditForm
@@ -26,6 +27,7 @@ def home_view(request, category_slug=None):
     return render(request, "posts/home.html", context)
 
 
+@login_required
 def post_create_view(request):
     form = PostCreateForm()
     context = {"form": form}
@@ -61,6 +63,7 @@ def post_create_view(request):
             post.image = image
             post.title = title
             post.artist = artist
+            post.author = request.user
             post.save()
             form.save_m2m()  # Required when commit=False
 
@@ -69,8 +72,9 @@ def post_create_view(request):
     return render(request, "posts/post_create.html", context)
 
 
+@login_required
 def post_delete_view(request, pk):
-    post = Post.objects.get(id=pk)
+    post = Post.objects.get(id=pk, author=request.user)
 
     context = {"post": post}
 
@@ -82,8 +86,9 @@ def post_delete_view(request, pk):
     return render(request, "posts/post_delete.html", context)
 
 
+@login_required
 def post_edit_view(request, pk):
-    post = Post.objects.get(id=pk)
+    post = Post.objects.get(id=pk, author=request.user)
     form = PostEditForm(instance=post)
 
     context = {"post": post, "form": form}
