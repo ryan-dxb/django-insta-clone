@@ -17,10 +17,20 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from posts.views import home_view, post_create_view
+from posts.views import (
+    home_view,
+    post_create_view,
+    post_delete_view,
+    post_edit_view,
+    post_detail_view,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", home_view, name="home_view"),
+    path("category/<slug:category_slug>", home_view, name="category-view"),
     path("posts/create", post_create_view, name="post-create"),
+    path("posts/delete/<pk>", post_delete_view, name="post-delete"),
+    path("posts/edit/<pk>", post_edit_view, name="post-edit"),
+    path("posts/<pk>", post_detail_view, name="post-detail"),
 ]
