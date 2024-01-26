@@ -4,8 +4,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 
-from posts.forms import PostCreateForm, PostEditForm
-from posts.models import Post, Tag
+from posts.forms import PostCreateForm, PostEditForm, CommentCreateForm, ReplyCreateForm
+from posts.models import Post, Tag, Comments, Reply
 
 
 # Create your views here.
@@ -106,6 +106,109 @@ def post_edit_view(request, pk):
 
 def post_detail_view(request, pk):
     post = get_object_or_404(Post, id=pk)
-    context = {"post": post}
+    commentform = CommentCreateForm()
+    replyform = ReplyCreateForm()
+
+    context = {"post": post, "commentform": commentform, "replyform": replyform}
 
     return render(request, "posts/post_page.html", context)
+
+
+@login_required
+def comment_sent(request, pk):
+    post = get_object_or_404(Post, id=pk)
+    # replyform = ReplyCreateForm()
+
+    if request.method == "POST":
+        form = CommentCreateForm(request.POST)
+        if form.is_valid:
+            comment = form.save(commit=False)
+            comment.author = request.user
+            comment.parent_post = post
+            comment.save()
+
+    context = {
+        "post": post,
+        "comment": comment,
+        # 'replyform': replyform
+    }
+
+    return redirect("post-detail", post.id)
+    # return render(request, "snippets/add_comment.html", context)
+
+
+@login_required
+def comment_delete_view(request, pk):
+    post = get_object_or_404(Comments, id=pk, author=request.user)
+
+    if request.method == "POST":
+        post.delete()
+        messages.success(request, "Comment deleted")
+        return redirect("post-detail", post.parent_post.id)
+
+    return render(request, "posts/comment_delete.html", {"comment": post})
+
+
+@login_required
+def reply_sent(request, pk):
+    comment = get_object_or_404(Comments, id=pk)
+    replyform = ReplyCreateForm()
+
+    if request.method == "POST":
+        form = ReplyCreateForm(request.POST)
+        if form.is_valid:
+            reply = form.save(commit=False)
+            reply.author = request.user
+            reply.parent_comment = comment
+            reply.save()
+
+    return redirect("post-detail", comment.parent_post.id)
+
+
+@login_required
+def reply_delete_view(request, pk):
+    reply = get_object_or_404(Reply, id=pk, author=request.user)
+
+    if request.method == "POST":
+        reply.delete()
+        messages.success(request, "Comment deleted")
+        return redirect("post-detail", reply.parent_comment.parent_post.id)
+
+    return render(request, "posts/reply_delete.html", {"reply": reply})
+
+
+def like_toggle(model):
+    def inner_func(func):
+        def wrapper(request, *args, **kwargs):
+            post = get_object_or_404(model, id=kwargs.get("pk"))
+            user_exist = post.likes.filter(username=request.user.username).exists()
+
+            if post.author != request.user:
+                if user_exist:
+                    post.likes.remove(request.user)
+                else:
+                    post.likes.add(request.user)
+
+            return func(request, post)
+
+        return wrapper
+
+    return inner_func
+
+
+@login_required
+@like_toggle(Post)
+def like_post(request, post):
+    return render(request, "snippets/likes.html", {"post": post})
+
+
+@login_required
+@like_toggle(Comments)
+def like_comment(request, post):
+    return render(request, "snippets/likes_comment.html", {"comment": post})
+
+
+@login_required
+@like_toggle(Reply)
+def like_reply(request, post):
+    return render(request, "snippets/likes_reply.html", {"reply": post})
